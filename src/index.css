@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,650;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Inter", sans-serif;
+  --font-cursive: "Great Vibes", cursive;
+}
+
+/* Custom background grid and line textures */
+.bg-paper-lines {
+  background-image: linear-gradient(rgba(244, 63, 94, 0.1) 1px, transparent 1px);
+  background-size: 100% 28px;
+}
+
+.clip-path-flap {
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+/* Base style resets if any */
+body {
+  font-family: var(--font-sans);
+  background-color: #fffafb;
+  color: #1c1917;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #fff5f6;
+}
+::-webkit-scrollbar-thumb {
+  background: #f43f5e;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #e11d48;
+}

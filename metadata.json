@@ -1,0 +1,6 @@
+{
+  "name": "Anniversary Website",
+  "description": "Website satu halaman bertema Anniversary Pernikahan/Pacaran yang romantis, modern, dan estetik dengan musik, countdown, surat cinta interaktif, galeri foto cerita, dan efek animasi hati berjatuhan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
