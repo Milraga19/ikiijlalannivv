@@ -26,7 +26,7 @@ import AnniversarySettingsDrawer from "./components/AnniversarySettingsDrawer";
 export default function App() {
   // Load settings from localStorage or fallback to default
   const [settings, setSettings] = useState<AnniversarySettings>(() => {
-    const saved = localStorage.getItem("anniversary_settings_v1");
+    const saved = localStorage.getItem("anniversary_settings_v2");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -187,7 +187,7 @@ export default function App() {
 
   const handleSaveSettings = (newSettings: AnniversarySettings) => {
     setSettings(newSettings);
-    localStorage.setItem("anniversary_settings_v1", JSON.stringify(newSettings));
+    localStorage.setItem("anniversary_settings_v2", JSON.stringify(newSettings));
     
     // Play sound from new URL if playing
     if (isMusicPlaying && audioRef.current) {
@@ -215,7 +215,7 @@ export default function App() {
     const updatedSettings = { ...settings, wishes: updatedWishes };
 
     setSettings(updatedSettings);
-    localStorage.setItem("anniversary_settings_v1", JSON.stringify(updatedSettings));
+    localStorage.setItem("anniversary_settings_v2", JSON.stringify(updatedSettings));
     setNewWishName("");
     setNewWishMessage("");
 
