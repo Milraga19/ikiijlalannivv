@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { AnniversarySettings, PhotoMemory, WishItem } from "../types";
-import { Settings, X, Heart, Save, Calendar, Plus, Trash2, Sliders, FileText, Music, Info } from "lucide-react";
+import { Settings, X, Heart, Save, Calendar, Plus, Trash2, Sliders, FileText, Music, Info, Copy, Check } from "lucide-react";
 
 interface SettingsDrawerProps {
   settings: AnniversarySettings;
@@ -13,11 +13,22 @@ interface SettingsDrawerProps {
 export default function AnniversarySettingsDrawer({ settings, onSave, isOpen, onClose }: SettingsDrawerProps) {
   const [activeTab, setActiveTab] = useState<"general" | "letter" | "gallery" | "extra">("general");
   const [localSettings, setLocalSettings] = useState<AnniversarySettings>({ ...settings });
+  const [isCopied, setIsCopied] = useState(false);
 
   // Update local settings if props change
   React.useEffect(() => {
     setLocalSettings({ ...settings });
   }, [settings]);
+
+  const handleCopyCode = () => {
+    const configString = JSON.stringify(localSettings, null, 2);
+    navigator.clipboard.writeText(configString).then(() => {
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 3000);
+    }).catch(err => {
+      console.error("Gagal menyalin konfigurasi:", err);
+    });
+  };
 
   const handleChange = (field: keyof AnniversarySettings, value: any) => {
     setLocalSettings((prev) => ({
@@ -374,10 +385,42 @@ export default function AnniversarySettingsDrawer({ settings, onSave, isOpen, on
                     <textarea
                       value={localSettings.futureWishesText}
                       onChange={(e) => handleChange("futureWishesText", e.target.value)}
-                      rows={5}
+                      rows={4}
                       className="w-full border border-stone-200 rounded-lg p-3 text-sm focus:outline-none focus:border-rose-400 bg-stone-50"
                       placeholder="Tuliskan komitmen atau harapan bersama di masa depan..."
                     />
+                  </div>
+
+                  {/* Export Box for Patenting */}
+                  <div className="pt-4 border-t border-rose-100/50 flex flex-col gap-2.5 bg-rose-50/40 p-4 rounded-xl border border-rose-100/30">
+                    <h5 className="text-xs font-bold text-rose-950 uppercase tracking-wider flex items-center gap-1.5 font-serif">
+                      <Heart className="w-3.5 h-3.5 text-rose-600 fill-rose-600 animate-pulse" />
+                      Patenkan Tampilan & Isi Website
+                    </h5>
+                    <p className="text-[11px] text-stone-600 leading-relaxed">
+                      Jika Anda ingin nama, surat, tanggal, lagu, dan semua momen foto yang sudah Anda edit saat ini <strong>menjadi permanen (bawaan asli)</strong> saat website pertama kali dibuka oleh siapa saja, silakan klik tombol di bawah ini lalu tempel/kirim kodenya ke AI Chat!
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleCopyCode}
+                      className={`w-full py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-97 cursor-pointer ${
+                        isCopied 
+                          ? "bg-green-600 text-white" 
+                          : "bg-rose-900 hover:bg-rose-950 text-white"
+                      }`}
+                    >
+                      {isCopied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 opacity-90" />
+                          Kode Konfigurasi Berhasil Disalin!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 opacity-90" />
+                          Salin Kode Konfigurasi Website
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               )}
