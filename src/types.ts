@@ -4,6 +4,8 @@ export interface PhotoMemory {
   title: string;
   date: string;
   story: string;
+  type?: "photo" | "video";
+  videoUrl?: string;
 }
 
 export interface WishItem {

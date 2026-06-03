@@ -37,7 +37,7 @@ export default function AnniversarySettingsDrawer({ settings, onSave, isOpen, on
     }));
   };
 
-  const handleMemoryChange = (id: string, field: keyof PhotoMemory, value: string) => {
+  const handleMemoryChange = (id: string, field: keyof PhotoMemory, value: any) => {
     const updatedMemories = localSettings.memories.map((m) => {
       if (m.id === id) {
         return { ...m, [field]: value };
@@ -58,7 +58,9 @@ export default function AnniversarySettingsDrawer({ settings, onSave, isOpen, on
       title: "Momen Baru Kita",
       date: new Date().toISOString().split("T")[0],
       imageUrl: "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=800&auto=format&fit=crop&q=80",
-      story: "Tuliskan cerita romantis tentang momen indah ini di sini..."
+      story: "Tuliskan cerita romantis tentang momen indah ini di sini...",
+      type: "photo",
+      videoUrl: ""
     };
     handleChange("memories", [...localSettings.memories, newMem]);
   };
@@ -317,15 +319,63 @@ export default function AnniversarySettingsDrawer({ settings, onSave, isOpen, on
                             </div>
                           </div>
 
+                          <div className="flex gap-4 p-2 bg-stone-100/50 rounded-lg border border-stone-150">
+                            <div>
+                              <span className="block text-[10px] font-bold text-stone-500 uppercase mb-1">Tipe Media</span>
+                              <div className="flex gap-4 items-center h-7">
+                                <label className="flex items-center gap-1.5 text-xs text-stone-700 cursor-pointer font-semibold">
+                                  <input
+                                    type="radio"
+                                    name={`media-type-${memory.id}`}
+                                    checked={memory.type !== "video"}
+                                    onChange={() => handleMemoryChange(memory.id, "type", "photo")}
+                                    className="text-rose-600 focus:ring-rose-400 cursor-pointer"
+                                  />
+                                  Foto 📸
+                                </label>
+                                <label className="flex items-center gap-1.5 text-xs text-stone-700 cursor-pointer font-semibold">
+                                  <input
+                                    type="radio"
+                                    name={`media-type-${memory.id}`}
+                                    checked={memory.type === "video"}
+                                    onChange={() => handleMemoryChange(memory.id, "type", "video")}
+                                    className="text-rose-600 focus:ring-rose-400 cursor-pointer"
+                                  />
+                                  Video 🎥
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+
+                          {memory.type === "video" && (
+                            <div>
+                              <label className="block text-[10px] font-bold text-stone-500 uppercase">URL Tautan Video (Direct MP4 / YouTube / Drive)</label>
+                              <input
+                                type="text"
+                                value={memory.videoUrl || ""}
+                                onChange={(e) => handleMemoryChange(memory.id, "videoUrl", e.target.value)}
+                                placeholder="Contoh: https://www.youtube.com/watch?v=... atau https://domain.com/video.mp4"
+                                className="w-full bg-white border border-stone-200 rounded p-1.5 text-xs font-mono focus:outline-none focus:border-rose-400"
+                              />
+                              <p className="text-[9px] text-rose-700 mt-0.5 font-medium">Mendukung YouTube link biasa, Google Drive share-link, atau link langsung file .mp4/.webm.</p>
+                            </div>
+                          )}
+
                           <div>
-                            <label className="block text-[10px] font-bold text-stone-500 uppercase">URL Tautan Foto (Unsplash/Direct Link)</label>
+                            <label className="block text-[10px] font-bold text-stone-500 uppercase">
+                              {memory.type === "video" ? "URL Gambar Sampul / Thumbnail Video" : "URL Tautan Foto (Unsplash/Direct Link)"}
+                            </label>
                             <input
                               type="text"
                               value={memory.imageUrl}
                               onChange={(e) => handleMemoryChange(memory.id, "imageUrl", e.target.value)}
                               className="w-full bg-white border border-stone-200 rounded p-1.5 text-xs font-mono focus:outline-none focus:border-rose-400"
                             />
-                            <p className="text-[9px] text-zinc-400 mt-0.5">Copy link gambar dari Unsplash atau host foto eksternal.</p>
+                            <p className="text-[9px] text-zinc-400 mt-0.5">
+                              {memory.type === "video" 
+                                ? "Gambar yang tampil di galeri sebelum video dibuka. Salin link gambar apa saja." 
+                                : "Salin link gambar dari Unsplash atau host foto eksternal."}
+                            </p>
                           </div>
 
                           <div>

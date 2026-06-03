@@ -26,7 +26,7 @@ import AnniversarySettingsDrawer from "./components/AnniversarySettingsDrawer";
 export default function App() {
   // Load settings from localStorage or fallback to default
   const [settings, setSettings] = useState<AnniversarySettings>(() => {
-    const saved = localStorage.getItem("anniversary_settings_v2");
+    const saved = localStorage.getItem("anniversary_settings_v3");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -41,6 +41,7 @@ export default function App() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [showCover, setShowCover] = useState(true);
   const [volume, setVolume] = useState(0.5);
   const [isMuted, setIsMuted] = useState(false);
   const [burstTrigger, setBurstTrigger] = useState<{ x: number; y: number; time: number }>({ x: 0, y: 0, time: 0 });
@@ -121,27 +122,123 @@ export default function App() {
     return () => clearInterval(interval);
   }, [settings.anniversaryDate]);
 
-  // Audio loading & control
+  // Audio loading & control with automatic fallbacks for expired Google Video/YouTube URLs
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.pause();
     }
-    const audio = new Audio(settings.audioUrl);
-    audio.loop = true;
-    audio.volume = isMuted ? 0 : volume;
-    audioRef.current = audio;
 
+    const fallbackUrls = [
+      settings.audioUrl,
+      "https://assets.mixkit.co/music/preview/mixkit-beautiful-dream-493.mp3",
+      "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+    ].filter(Boolean);
+
+    let currentUrlIndex = 0;
+    let audio: HTMLAudioElement | null = null;
+    let fallbackTimer: NodeJS.Timeout | null = null;
+
+    const setupAudio = (index: number) => {
+      if (index >= fallbackUrls.length) return;
+
+      if (audio) {
+        audio.pause();
+        audio.removeEventListener("error", handleError);
+        audio.removeEventListener("stalled", handleError);
+      }
+
+      console.log(`Setting up audio stream index ${index}: ${fallbackUrls[index]}`);
+      audio = new Audio(fallbackUrls[index]);
+      audio.loop = true;
+      audio.volume = isMuted ? 0 : volume;
+      audioRef.current = audio;
+
+      audio.addEventListener("error", handleError);
+      audio.addEventListener("stalled", handleError);
+
+      // Timeout fallback: if audio doesn't start playing/buffering within 4.5 seconds, try next source
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      fallbackTimer = setTimeout(() => {
+        if (audio && (audio.paused || audio.readyState < 2) && isMusicPlaying) {
+          console.warn("Audio load timed out, switching to fallback stream.");
+          handleError();
+        }
+      }, 4500);
+
+      // Play if user has already interacted or autoplay is active
+      if (isMusicPlaying) {
+        audio.play()
+          .then(() => {
+            if (fallbackTimer) clearTimeout(fallbackTimer);
+          })
+          .catch((err) => {
+            console.log("Playback failed or deferred on setup:", err);
+          });
+      }
+    };
+
+    const handleError = () => {
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      currentUrlIndex++;
+      if (currentUrlIndex < fallbackUrls.length) {
+        console.warn(`Audio stream failed to load. Trying fallback source ${currentUrlIndex}...`);
+        setupAudio(currentUrlIndex);
+      }
+    };
+
+    // Initialize first source
+    setupAudio(currentUrlIndex);
+
+    const playAudioSecurely = () => {
+      if (audioRef.current) {
+        audioRef.current.play()
+          .then(() => {
+            setIsMusicPlaying(true);
+            removeListeners();
+          })
+          .catch((err) => {
+            console.log("Interaction play delayed:", err);
+          });
+      }
+    };
+
+    const removeListeners = () => {
+      document.removeEventListener("click", playAudioSecurely);
+      document.removeEventListener("touchstart", playAudioSecurely);
+      document.removeEventListener("keydown", playAudioSecurely);
+      document.removeEventListener("scroll", playAudioSecurely);
+    };
+
+    // Register active listeners to capture manual fallback interaction if autoplay is restricted
     if (isMusicPlaying) {
-      audio.play().catch((err) => {
-        console.log("Autoplay blocked or audio load error. Waiting for user interaction.");
-        setIsMusicPlaying(false);
-      });
+      audio?.play()
+        .then(() => {
+          setIsMusicPlaying(true);
+        })
+        .catch((err) => {
+          console.log("Immediate play deferred by browser policy. Interaction listeners active.");
+          document.addEventListener("click", playAudioSecurely, { once: true });
+          document.addEventListener("touchstart", playAudioSecurely, { once: true });
+          document.addEventListener("keydown", playAudioSecurely, { once: true });
+          document.addEventListener("scroll", playAudioSecurely, { once: true, passive: true });
+        });
+    } else {
+      document.addEventListener("click", playAudioSecurely, { once: true });
+      document.addEventListener("touchstart", playAudioSecurely, { once: true });
+      document.addEventListener("keydown", playAudioSecurely, { once: true });
+      document.addEventListener("scroll", playAudioSecurely, { once: true, passive: true });
     }
 
     return () => {
-      audio.pause();
+      if (audio) {
+        audio.pause();
+        audio.removeEventListener("error", handleError);
+        audio.removeEventListener("stalled", handleError);
+      }
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      removeListeners();
     };
-  }, [settings.audioUrl]);
+  }, [settings.audioUrl, isMusicPlaying]);
 
   // Update volume & muting
   useEffect(() => {
@@ -187,7 +284,7 @@ export default function App() {
 
   const handleSaveSettings = (newSettings: AnniversarySettings) => {
     setSettings(newSettings);
-    localStorage.setItem("anniversary_settings_v2", JSON.stringify(newSettings));
+    localStorage.setItem("anniversary_settings_v3", JSON.stringify(newSettings));
     
     // Play sound from new URL if playing
     if (isMusicPlaying && audioRef.current) {
@@ -215,7 +312,7 @@ export default function App() {
     const updatedSettings = { ...settings, wishes: updatedWishes };
 
     setSettings(updatedSettings);
-    localStorage.setItem("anniversary_settings_v2", JSON.stringify(updatedSettings));
+    localStorage.setItem("anniversary_settings_v3", JSON.stringify(updatedSettings));
     setNewWishName("");
     setNewWishMessage("");
 
@@ -240,6 +337,72 @@ export default function App() {
       className="min-h-screen relative flex flex-col justify-between overflow-x-hidden"
       onClick={handleGlobalClick}
     >
+      {/* Elegant cover screen overlay for browser autoplay compliance */}
+      <AnimatePresence>
+        {showCover && (
+          <motion.div
+            className="fixed inset-0 z-50 flex flex-col justify-center items-center bg-gradient-to-tr from-rose-50 via-stone-50 to-rose-100/90 text-center px-4"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
+          >
+            {/* Background ambient floating hearts */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40 select-none">
+              <FloatingHearts burstTrigger={{ x: 0, y: 0, time: 0 }} />
+            </div>
+
+            <motion.div
+              className="bg-white/90 backdrop-blur-md rounded-3xl p-8 max-w-sm w-full border border-rose-100 shadow-2xl flex flex-col items-center relative z-10"
+              initial={{ scale: 0.9, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 120 }}
+            >
+              {/* Pulsing heart icon badge */}
+              <div className="relative mb-6">
+                <div className="absolute -inset-2 rounded-full bg-rose-200/50 animate-ping"></div>
+                <div className="relative bg-gradient-to-tr from-rose-500 to-rose-600 text-white p-5 rounded-full shadow-lg">
+                  <Heart className="w-10 h-10 fill-current animate-pulse" />
+                </div>
+              </div>
+
+              <h1 className="font-cursive text-4xl text-rose-600 mb-1">
+                {settings.coupleName1} & {settings.coupleName2}
+              </h1>
+              <p className="font-serif text-base font-bold text-rose-900 mb-4 tracking-wide uppercase">
+                Hari Jadi Kita ♥
+              </p>
+              
+              <div className="h-[2px] w-16 bg-gradient-to-r from-transparent via-rose-300 to-transparent mb-6 mx-auto"></div>
+              
+              <p className="text-stone-600 text-xs sm:text-sm leading-relaxed mb-8 max-w-xs font-sans">
+                Sebuah halaman cerita spesial untuk merayakan indahnya perjalanan cinta kita. Siap mendengarkan dan melihat keindahan bersamanya?
+              </p>
+
+              <button
+                id="cover-enter-button"
+                onClick={() => {
+                  setShowCover(false);
+                  setIsMusicPlaying(true);
+                  if (audioRef.current) {
+                    audioRef.current.play()
+                      .then(() => {
+                        console.log("Music auto-played on explicit user interaction successfully!");
+                      })
+                      .catch((err) => {
+                        console.warn("Autoplay action deferred or audio source failed:", err);
+                      });
+                  }
+                }}
+                className="w-full bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2 text-sm font-serif"
+              >
+                <Music className="w-4 h-4 animate-pulse" />
+                Buka Surat & Kejutan Romantis 🌸
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Background Floating Hearts */}
       <FloatingHearts burstTrigger={burstTrigger} />
 
