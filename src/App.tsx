@@ -23,6 +23,20 @@ import LoveLetter from "./components/LoveLetter";
 import MemoryGallery from "./components/MemoryGallery";
 import AnniversarySettingsDrawer from "./components/AnniversarySettingsDrawer";
 
+// Helper format function to parse "YYYY-MM-DD" and format safely in GMT+8 without timezone shift
+const formatIndonesianDate = (dateStr: string, options: Intl.DateTimeFormatOptions = {}) => {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return dateStr;
+  const [year, month, day] = parts;
+  // Construct UTC date to force exact local date components to format without machine-local offset shifting
+  const d = new Date(Date.UTC(year, month - 1, day));
+  return d.toLocaleDateString("id-ID", {
+    ...options,
+    timeZone: "UTC"
+  });
+};
+
 export default function App() {
   // Load settings from localStorage or fallback to default
   const [settings, setSettings] = useState<AnniversarySettings>(() => {
@@ -62,20 +76,37 @@ export default function App() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Calculate duration since anniversary date
+  // Calculate duration since anniversary date in Makassar (GMT+8 / WITA)
   const updateCountdown = () => {
-    const start = new Date(settings.anniversaryDate);
+    if (!settings.anniversaryDate) return;
+    const parts = settings.anniversaryDate.split("-").map(Number);
+    if (parts.length !== 3 || parts.some(isNaN)) return;
+    
+    const [startYear, startMonthRaw, startDate] = parts;
+    const startMonth = startMonthRaw - 1; // 0-indexed
+    
+    // Makassar midnight absolute timestamp in milliseconds
+    const startUtcDate = new Date(Date.UTC(startYear, startMonth, startDate, 0, 0, 0));
+    const startAbsoluteMs = startUtcDate.getTime() - (8 * 60 * 60 * 1000);
+    
     const now = new Date();
     
-    if (isNaN(start.getTime())) return;
+    // Shift UTC time to Makassar local time (UTC+8) equivalent
+    const nowMakassar = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const nowYear = nowMakassar.getUTCFullYear();
+    const nowMonth = nowMakassar.getUTCMonth();
+    const nowDate = nowMakassar.getUTCDate();
+    const nowHours = nowMakassar.getUTCHours();
+    const nowMinutes = nowMakassar.getUTCMinutes();
+    const nowSeconds = nowMakassar.getUTCSeconds();
 
-    let years = now.getFullYear() - start.getFullYear();
-    let months = now.getMonth() - start.getMonth();
-    let days = now.getDate() - start.getDate();
+    let years = nowYear - startYear;
+    let months = nowMonth - startMonth;
+    let days = nowDate - startDate;
 
     if (days < 0) {
-      const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-      days += prevMonth.getDate();
+      const prevMonth = new Date(Date.UTC(nowYear, nowMonth, 0));
+      days += prevMonth.getUTCDate();
       months--;
     }
 
@@ -84,9 +115,9 @@ export default function App() {
       years--;
     }
 
-    let hours = now.getHours() - start.getHours();
-    let minutes = now.getMinutes() - start.getMinutes();
-    let seconds = now.getSeconds() - start.getSeconds();
+    let hours = nowHours;
+    let minutes = nowMinutes;
+    let seconds = nowSeconds;
 
     if (seconds < 0) {
       seconds += 60;
@@ -100,8 +131,8 @@ export default function App() {
       hours += 24;
       days--;
       if (days < 0) {
-        const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-        days += prevMonth.getDate();
+        const prevMonth = new Date(Date.UTC(nowYear, nowMonth, 0));
+        days += prevMonth.getUTCDate();
         months--;
         if (months < 0) {
           months += 12;
@@ -110,7 +141,7 @@ export default function App() {
       }
     }
 
-    const totalDays = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const totalDays = Math.floor((now.getTime() - startAbsoluteMs) / (1000 * 60 * 60 * 24));
 
     setTimeElapsed({ years, months, days, hours, minutes, seconds, totalDays });
   };
@@ -498,7 +529,7 @@ export default function App() {
             transition={{ delay: 0.4 }}
           >
             <Calendar className="w-4 h-4 text-rose-500" />
-            Mulai Sejak : {new Date(settings.anniversaryDate).toLocaleDateString("id-ID", {
+            Mulai Sejak : {formatIndonesianDate(settings.anniversaryDate, {
               weekday: "long",
               year: "numeric",
               month: "long",
