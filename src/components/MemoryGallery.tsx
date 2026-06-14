@@ -47,6 +47,18 @@ const getGoogleDriveEmbedUrl = (url: string) => {
   return url;
 };
 
+const formatIndonesianDate = (dateStr: string, options: Intl.DateTimeFormatOptions = {}) => {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return dateStr;
+  const [year, month, day] = parts;
+  const d = new Date(Date.UTC(year, month - 1, day));
+  return d.toLocaleDateString("id-ID", {
+    ...options,
+    timeZone: "UTC"
+  });
+};
+
 export default function MemoryGallery({ memories }: MemoryGalleryProps) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [filter, setFilter] = useState<"all" | "photo" | "video">("all");
@@ -214,7 +226,7 @@ export default function MemoryGallery({ memories }: MemoryGalleryProps) {
                 {/* Floating Date badge */}
                 <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-rose-800 text-[11px] font-semibold border border-rose-100 flex items-center gap-1 shadow-sm">
                   <Calendar className="w-3 h-3 text-rose-500" />
-                  {new Date(memory.date).toLocaleDateString("id-ID", {
+                  {formatIndonesianDate(memory.date, {
                     year: "numeric",
                     month: "short",
                     day: "numeric",
@@ -358,7 +370,7 @@ export default function MemoryGallery({ memories }: MemoryGalleryProps) {
                   </h4>
                   <span className="bg-rose-50 text-rose-800 text-xs px-3.5 py-1 rounded-full font-semibold border border-rose-100 flex items-center gap-1 shadow-sm">
                     <Calendar className="w-3.5 h-3.5 text-rose-500" />
-                    {new Date(activeMemory.date).toLocaleDateString("id-ID", {
+                    {formatIndonesianDate(activeMemory.date, {
                       weekday: "long",
                       year: "numeric",
                       month: "long",
